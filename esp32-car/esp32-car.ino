@@ -3,23 +3,27 @@
 BluetoothSerial SerialBT;
 
 // Motor A
-#define ENA 25
-#define IN1 26
-#define IN2 27
+#define ENA 14
+#define IN1 27
+#define IN2 26
 
 // Motor B
-#define ENB 14
-#define IN3 18  // changed from 12 to 18 (safe boot)
-#define IN4 19  // changed from 13 to 19 (safe boot)
+#define ENB 25
+#define IN3 33
+#define IN4 32
 
-int speedVal = 180; // 0–255
+int speedVal = 220; // 0–255
 
-unsigned long lastCmdTime = 0;
 const unsigned long demoDelay = 3000; // 3 seconds
+
+/* ================= Dead-Man ================= */
+unsigned long lastCmdTime = 0;
+const unsigned long CMD_TIMEOUT = 300;
+bool motorRunning = false;
 
 void setup() {
   Serial.begin(115200);
-  SerialBT.begin("Ruju'S_ESP32_CAR"); // Bluetooth name
+  SerialBT.begin("Afsal'S_ESP32_CAR"); // Bluetooth name
 
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -43,6 +47,7 @@ void forward() {
   digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal);
   ledcWrite(ENB, speedVal);
+  motorRunning = true;
 }
 
 void backward() {
@@ -53,6 +58,7 @@ void backward() {
   digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal);
   ledcWrite(ENB, speedVal);
+  motorRunning = true;
 }
 
 void left() {
@@ -63,6 +69,7 @@ void left() {
   digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal);
   ledcWrite(ENB, speedVal);
+  motorRunning = true;
 }
 
 void right() {
@@ -73,12 +80,20 @@ void right() {
   digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal);
   ledcWrite(ENB, speedVal);
+  motorRunning = true;
 }
 
 void stopMotors() {
   Serial.println("⛔ STOP");
+
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+
   ledcWrite(ENA, 0);
   ledcWrite(ENB, 0);
+   motorRunning = false;
 }
 
 void demoMotion() {
@@ -104,7 +119,8 @@ void loop() {
       case 'R': right(); break;
       case 'S': stopMotors(); break;
       default:
-        Serial.println("❓ Unknown Command - " + cmd);
+        Serial.print("❓ Unknown Command: ");
+        Serial.println(cmd);
         break;
     }
   }
@@ -115,4 +131,8 @@ void loop() {
   //   demoMotion();
   //   lastCmdTime = millis();
   // }
+
+  if (motorRunning && millis() - lastCmdTime > CMD_TIMEOUT) {
+    stopMotors();
+  }
 }
