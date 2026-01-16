@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <Adafruit_NeoPixel.h>
 
 /* ================= Motor Pins ================= */
 #define ENA 4
@@ -12,6 +13,63 @@
 #define IN4 16
 
 int speedVal = 220;
+
+/* ================= NeoPixel Config ================= */
+#define NEOPIXEL_PIN 48
+#define NUMPIXELS 1
+
+Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+/* ================= NeoPixel Functions ================= */
+void setupPixels() {
+  pixels.begin();
+  Serial.print("Pixels Initialized....");
+}
+
+void pixelStart() {
+  int lastPixel = NUMPIXELS - 1;
+
+  // Increase Brightness
+  for (int i = 0; i <= 225; i++) {
+    pixels.setPixelColor(lastPixel, pixels.Color(225,225,225));
+    pixels.setBrightness(i);
+    pixels.show();
+    delay(10);
+  }
+
+  // Decrease Brightness
+  for (int i = 225; i >= 0; i--) {
+    pixels.setPixelColor(lastPixel, pixels.Color(225,225,225));
+    pixels.setBrightness(i);
+    pixels.show();
+    delay(10);
+  }
+}
+
+void hexToRGB(String hex, uint8_t &r, uint8_t &g, uint8_t &b) {
+  if (hex.startsWith("#")) hex = hex.substring(1); // remove #
+  if (hex.length() != 6) { r = g = b = 0; return; } // invalid
+  r = strtol(hex.substring(0,2).c_str(), nullptr, 16);
+  g = strtol(hex.substring(2,4).c_str(), nullptr, 16);
+  b = strtol(hex.substring(4,6).c_str(), nullptr, 16);
+}
+void stopBlink() {
+  pixels.setPixelColor(0,pixels.Color(0,0,0));
+  pixels.show();
+}
+
+void blinkPixel(int timeout, String ColorHash, int brightness) {
+  stopBlink();
+  uint8_t r, g, b;
+  hexToRGB(ColorHash, r, g, b);
+
+  pixels.setPixelColor(0,pixels.Color(r, g, b));
+  pixels.setBrightness(brightness);
+  pixels.show();
+  delay(timeout);
+}
+
+
 
 /* ================= WiFi ================= */
 const char* ssid = "Ruju's ESP32_CAR";
@@ -34,6 +92,7 @@ void stopMotors() {
 }
 
 void forward() {
+  // blinkPixel(1500, "#FFFFFF", 180);
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -41,6 +100,7 @@ void forward() {
 }
 
 void backward() {
+  // blinkPixel(1500, "#FF0000", 180);
   digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -48,6 +108,7 @@ void backward() {
 }
 
 void left() {
+  // blinkPixel(1500, "#FFB030", 180);
   digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
   digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -55,6 +116,7 @@ void left() {
 }
 
 void right() {
+  // blinkPixel(1500, "#FFB030", 180);
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -222,6 +284,9 @@ function send(c){ ws.send(c); }
 void setup() {
   Serial.begin(115200);
 
+  delay(1000);
+  Serial.println("ESP32 BOOT OK");
+
   pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
 
@@ -229,6 +294,8 @@ void setup() {
   ledcAttach(ENB, 1000, 8);
 
   stopMotors();
+  // setupPixels(); // Initalized the NeoPixels
+  // pixelStart();
 
   WiFi.softAP(ssid, password);
   Serial.print("AP IP: ");
