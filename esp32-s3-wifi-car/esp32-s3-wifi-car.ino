@@ -155,123 +155,210 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta charset="UTF-8">
-<title>ESP32 Car RC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 RC Car</title>
+
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f0f0f0;
-    margin: 0;
-    padding: 0;
-  }
+:root {
+  --bg: #1b1b1b;
+  --glow: #2fd6e8;
+  --btn: #222;
+  --text: #6fe7f2;
+}
 
-  h2 {
-    margin-top: 20px;
-    color: #333;
-  }
+* {
+  box-sizing: border-box;
+}
 
-  .dpad {
-    display: inline-grid;
-    grid-template-columns: 100px 100px 100px;
-    grid-template-rows: 100px 100px 100px;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 30px;
-  }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
 
-  button {
-    width: 100px;
-    height: 100px;
-    border-radius: 20px;
-    border: none;
-    background: #4CAF50;
-    cursor: pointer;
-    box-shadow: 0 5px #2e7d32;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s ease-in-out;
-  }
+/* ---------- LAYOUT ---------- */
+.container {
+  width: 95%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+}
 
-  button:active {
-    transform: translateY(3px);
-    box-shadow: 0 2px #2e7d32;
-    background: #45a049;
-  }
+/* ---------- D-PAD ---------- */
+.dpad {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  box-shadow: 0 0 25px var(--glow);
+  margin: auto;
+}
 
-  .stop {
-    background: #f44336;
-    box-shadow: 0 5px #c62828;
-  }
+.dpad button {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  background: transparent;
+  border: none;
+  color: var(--glow);
+  font-size: 42px;
+  font-weight: bold;
 
-  .empty {
-    background: transparent;
-    box-shadow: none;
-    cursor: default;
-  }
+  touch-action: none;
+  user-select: none;
 
-  svg {
-    width: 40px;
-    height: 40px;
-    fill: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dpad button:active {
+  color: white;
+  transform: scale(1.2);
+}
+
+/* Arrow symbols */
+.up::before    { content: "F"; }
+.down::before  { content: "B"; }
+.left::before  { content: "L"; }
+.right::before { content: "R"; }
+
+.up    { top: 5px; left: 50%; transform: translateX(-50%); }
+.down  { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.left  { left: 5px; top: 50%; transform: translateY(-50%); }
+.right { right: 5px; top: 50%; transform: translateY(-50%); }
+
+/* ---------- CENTER ---------- */
+.center {
+  text-align: center;
+}
+
+.slider {
+  width: 80%;
+}
+
+.value {
+  font-size: 22px;
+  margin-bottom: 5px;
+}
+
+.action-btn {
+  margin: 15px;
+  padding: 15px 30px;
+  background: var(--btn);
+  border-radius: 12px;
+  border: none;
+  color: var(--glow);
+  font-size: 18px;
+  box-shadow: 0 0 15px var(--glow);
+
+  touch-action: none;
+  user-select: none;
+}
+
+.action-btn:active {
+  transform: scale(1.1);
+  color: white;
+}
+
+/* ---------- RIGHT CLUSTER ---------- */
+.cluster {
+  display: grid;
+  grid-template-columns: repeat(3, 80px);
+  grid-template-rows: repeat(3, 80px);
+  gap: 15px;
+  justify-content: center;
+}
+
+.cluster button {
+  border-radius: 50%;
+  border: none;
+  background: var(--btn);
+  color: var(--glow);
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: 0 0 15px var(--glow);
+
+  touch-action: none;
+  user-select: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cluster button:active {
+  transform: scale(1.15);
+  color: white;
+  box-shadow: 0 0 25px white;
+}
+
+.cluster .f { grid-column: 2; }
+.cluster .l { grid-column: 1; grid-row: 2; }
+.cluster .r { grid-column: 3; grid-row: 2; }
+.cluster .b { grid-column: 2; grid-row: 3; }
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
+}
 </style>
 </head>
+
 <body>
-<h2>🚗 ESP32 Car RC</h2>
+<div class="container">
 
-<div class="dpad">
-  <button ontouchstart="send('F')" ontouchend="send('S')">
-    <!-- Up arrow -->
-    <svg viewBox="0 0 24 24">
-      <path d="M12 2L5 9h5v10h4V9h5z"/>
-    </svg>
-  </button>
-  <div class="empty"></div>
-  <button ontouchstart="send('F')" ontouchend="send('S')">
-    <svg viewBox="0 0 24 24">
-      <path d="M12 2L5 9h5v10h4V9h5z"/>
-    </svg>
-  </button>
+  <!-- LEFT : D-PAD -->
+  <div class="dpad">
+    <button class="up"    ontouchstart="send('F')" ontouchend="send('S')"></button>
+    <button class="down"  ontouchstart="send('B')" ontouchend="send('S')"></button>
+    <button class="left"  ontouchstart="send('L')" ontouchend="send('S')"></button>
+    <button class="right" ontouchstart="send('R')" ontouchend="send('S')"></button>
+  </div>
 
-  <button ontouchstart="send('L')" ontouchend="send('S')">
-    <!-- Left arrow -->
-    <svg viewBox="0 0 24 24">
-      <path d="M2 12l9-7v4h10v6H11v4z"/>
-    </svg>
-  </button>
-  <button class="stop" ontouchstart="send('S')">
-    <!-- Stop -->
-    <svg viewBox="0 0 24 24">
-      <rect x="6" y="6" width="12" height="12"/>
-    </svg>
-  </button>
-  <button ontouchstart="send('R')" ontouchend="send('S')">
-    <!-- Right arrow -->
-    <svg viewBox="0 0 24 24">
-      <path d="M22 12l-9 7v-4H3v-6h10V5z"/>
-    </svg>
-  </button>
+  <!-- CENTER -->
+  <div class="center">
+    <div class="value" id="spd">50</div>
+    <input class="slider" type="range" min="0" max="100" value="50"
+           oninput="updateSpeed(this.value)">
+    <div>Speed</div>
 
-  <button ontouchstart="send('B')" ontouchend="send('S')">
-    <!-- Down arrow -->
-    <svg viewBox="0 0 24 24">
-      <path d="M12 22l7-7h-5V5h-4v10H5z"/>
-    </svg>
-  </button>
-  <div class="empty"></div>
-  <button ontouchstart="send('B')" ontouchend="send('S')">
-    <svg viewBox="0 0 24 24">
-      <path d="M12 22l7-7h-5V5h-4v10H5z"/>
-    </svg>
-  </button>
+    <button class="action-btn" ontouchstart="send('H')">Horn</button>
+    <button class="action-btn" ontouchstart="send('I')">Light</button>
+  </div>
+
+  <!-- RIGHT : CLUSTER -->
+  <div class="cluster">
+    <button class="f" ontouchstart="send('F')" ontouchend="send('S')">F</button>
+    <button class="l" ontouchstart="send('L')" ontouchend="send('S')">L</button>
+    <button class="r" ontouchstart="send('R')" ontouchend="send('S')">R</button>
+    <button class="b" ontouchstart="send('B')" ontouchend="send('S')">B</button>
+  </div>
+
 </div>
 
 <script>
 let ws = new WebSocket("ws://" + location.host + "/ws");
-function send(c){ ws.send(c); }
+
+function send(cmd) {
+  if (ws.readyState === 1) {
+    ws.send(cmd);
+  }
+}
+
+function updateSpeed(v) {
+  document.getElementById("spd").innerText = v;
+  send("V" + v);
+}
 </script>
 </body>
 </html>
