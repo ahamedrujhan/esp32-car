@@ -20,29 +20,70 @@ int speedVal = 220;
 
 Adafruit_NeoPixel pixels(NUMPIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+unsigned long pixelStartTime = 0;
+bool pixelActive = false;
+unsigned long pixelTimeout = 0;
+bool pixelStartup = false;
+
+bool fadeUp = true;
+int pixelBrightness = 0;
+unsigned long pixelInterval = 20;
+
+const int lastPixel = NUMPIXELS - 1;
+
+// blinknig the led 
+
+String ColorHash = "";
+int brightness = 0;
+
+
 /* ================= NeoPixel Functions ================= */
 void setupPixels() {
   pixels.begin();
-  Serial.print("Pixels Initialized....");
+  Serial.println("Pixels Initialized....");
+  pixelBrightness = 0;
+  fadeUp = true;
+  pixelStartTime = millis();
+  pixelStartup = true;
 }
 
 void pixelStart() {
-  int lastPixel = NUMPIXELS - 1;
 
-  // Increase Brightness
-  for (int i = 0; i <= 225; i++) {
-    pixels.setPixelColor(lastPixel, pixels.Color(225,225,225));
-    pixels.setBrightness(i);
-    pixels.show();
-    delay(10);
+  if (!pixelStartup) return;
+
+  if (millis() - pixelStartTime >= pixelInterval) {
+
+    pixelStartTime = millis();
+     pixels.setPixelColor(lastPixel, pixels.Color(252, 113, 25));
+     pixels.setBrightness(pixelBrightness);
+     pixels.show();
+
+     if(fadeUp) {
+      if(pixelBrightness >= 225) fadeUp = false;
+      else {
+        pixelBrightness++;
+      }
+     } 
+     
+     else {
+        if(pixelBrightness <= 0) {
+          pixels.clear();
+          pixels.show();
+          pixelStartup = false;
+        }
+
+        else {
+          pixelBrightness--;
+        }
+     }
   }
+}
 
-  // Decrease Brightness
-  for (int i = 225; i >= 0; i--) {
-    pixels.setPixelColor(lastPixel, pixels.Color(225,225,225));
-    pixels.setBrightness(i);
+void updatePixel() {
+  if(pixelActive && (millis() - pixelStartTime >= pixelTimeout)) {
+    pixels.clear();
     pixels.show();
-    delay(10);
+    pixelActive = false;
   }
 }
 
@@ -53,20 +94,36 @@ void hexToRGB(String hex, uint8_t &r, uint8_t &g, uint8_t &b) {
   g = strtol(hex.substring(2,4).c_str(), nullptr, 16);
   b = strtol(hex.substring(4,6).c_str(), nullptr, 16);
 }
-void stopBlink() {
-  pixels.setPixelColor(0,pixels.Color(0,0,0));
-  pixels.show();
+
+
+void setPixel (String color, int bright) {
+  ColorHash = color;
+  brightness = bright;
+  pixelActive = true;
 }
 
-void blinkPixel(int timeout, String ColorHash, int brightness) {
-  stopBlink();
+
+void showPixelIfActive () {
+  if(pixelActive) {
   uint8_t r, g, b;
   hexToRGB(ColorHash, r, g, b);
-
   pixels.setPixelColor(0,pixels.Color(r, g, b));
   pixels.setBrightness(brightness);
   pixels.show();
-  delay(timeout);
+  }
+}
+
+void stopPixelIfInActive() {
+  if(!pixelActive) {
+    pixels.clear();
+    pixels.show();
+  }
+}
+
+void stopPixels () {
+  if(pixelActive) {
+  pixelActive = false;
+  }
 }
 
 
@@ -88,11 +145,18 @@ bool motorRunning = false;
 void stopMotors() {
   ledcWrite(ENA, 0);
   ledcWrite(ENB, 0);
+
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+
   motorRunning = false;
+  stopPixels();
 }
 
 void forward() {
-  // blinkPixel(1500, "#FFFFFF", 180);
+  setPixel("#FFFFFF", 100);
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -100,7 +164,7 @@ void forward() {
 }
 
 void backward() {
-  // blinkPixel(1500, "#FF0000", 180);
+  setPixel("#FF0000", 100);
   digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -108,7 +172,7 @@ void backward() {
 }
 
 void left() {
-  // blinkPixel(1500, "#FFB030", 180);
+  setPixel("#FFB030", 100);
   digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
   digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -116,7 +180,7 @@ void left() {
 }
 
 void right() {
-  // blinkPixel(1500, "#FFB030", 180);
+  setPixel("#FFB030", 100);
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -381,8 +445,7 @@ void setup() {
   ledcAttach(ENB, 1000, 8);
 
   stopMotors();
-  // setupPixels(); // Initalized the NeoPixels
-  // pixelStart();
+  setupPixels(); // Initalized the NeoPixels
 
   WiFi.softAP(ssid, password);
   Serial.print("AP IP: ");
@@ -403,4 +466,10 @@ void loop() {
   // if (motorRunning && millis() - lastCmdTime > CMD_TIMEOUT) {
   //   stopMotors();
   // }
+  pixelStart();
+
+  if(!pixelStartup) {
+  showPixelIfActive();
+  stopPixelIfInActive();
+  }
 }
