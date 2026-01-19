@@ -36,6 +36,9 @@ const int lastPixel = NUMPIXELS - 1;
 String ColorHash = "";
 int brightness = 0;
 
+// Head Light
+bool enableLight = false;
+
 
 /* ================= NeoPixel Functions ================= */
 void setupPixels() {
@@ -126,6 +129,25 @@ void stopPixels () {
   }
 }
 
+void switchLight () {
+  enableLight = !enableLight;
+}
+
+void headLightUp () {
+  if(enableLight && !pixelActive) {
+    pixels.setPixelColor(0, pixels.Color(252, 113, 25));
+    pixels.setBrightness(200);
+    pixels.show();
+  }
+}
+
+void headLightDown () {
+  if(!enableLight) {
+    pixels.clear();
+    pixels.show();
+  }
+}
+
 
 
 /* ================= WiFi ================= */
@@ -172,7 +194,7 @@ void backward() {
 }
 
 void left() {
-  setPixel("#FFB030", 100);
+  setPixel("#ff6214", 100);
   digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
   digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -180,7 +202,7 @@ void left() {
 }
 
 void right() {
-  setPixel("#FFB030", 100);
+  setPixel("#ff6214", 100);
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   ledcWrite(ENA, speedVal); ledcWrite(ENB, speedVal);
@@ -207,6 +229,7 @@ void onWsEvent(AsyncWebSocket *server,
       case 'L': left(); break;
       case 'R': right(); break;
       case 'S': stopMotors(); break;
+      case 'I': switchLight(); break;
       default : Serial.print("Unknown Command...."); break;
     }
   }
@@ -471,5 +494,7 @@ void loop() {
   if(!pixelStartup) {
   showPixelIfActive();
   stopPixelIfInActive();
+  headLightUp();
+  headLightDown();
   }
 }
